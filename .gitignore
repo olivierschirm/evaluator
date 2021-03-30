@@ -1,0 +1,5 @@
+results.txt
+RES/*
+GT/*
+.vscode
+__pycache__
