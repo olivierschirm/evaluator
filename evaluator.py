@@ -4,11 +4,22 @@ from termcolor import colored
 import numpy
 from math import *
 from functions import *
+from optparse import OptionParser
+
+parser = OptionParser()
+parser.add_option("-f", "--file", dest="fileloc", help="Give your geojson file location")
+parser.add_option("-t", "--truth", dest="truthloc", help="Give your GroundTruth geojson file location")
+parser.add_option("-m", "--tmatch", dest="tmatch", default=50, help="Give your a maximal value for intersection matching. Default = 50m")
+
+(options, args) = parser.parse_args()
+
+if not options.fileloc: parser.error('File location not given')
+if not options.truthloc : parser.error('Truth file location not given')
 
 #Parameters
-path = sys.argv[1]
-pathTruth = sys.argv[2]
-Tmatch = 50
+path = options.fileloc
+pathTruth = options.truthloc
+Tmatch = int(options.tmatch)
 convCoef = 110466
 
 #Input
@@ -68,6 +79,28 @@ print("FScore = ", fscore, "%")
 print("Accuracy = ", accuracy, "m")
 print()
 
+from geojson import Point, Feature, FeatureCollection, dump, LineString
+features = []
+
+for intersection in TP :
+    features.append(Feature(geometry=Point(intersection), properties={'marker-color': '#3fc700'}))
+
+for intersection in FP :
+    features.append(Feature(geometry=Point(intersection), properties={'marker-color': '#d11f1f'}))
+
+for intersection in intersectionsTruth :
+    features.append(Feature(geometry=Point(intersection), properties={'marker-color': '#e61edf'}))
+
+#e61edf
+feature_collection = FeatureCollection(features)
+
+with open('result.geojson', 'w') as f:
+    dump(feature_collection, f)
+
+
+
+
+
 ##Segment evaluation
 
 #Return an map dictionnary with the following constitution :
@@ -92,8 +125,8 @@ FN = [segmentsTruth.index(segmentTruth) for segmentTruth in segmentsTruth if seg
 # - Compute the adjacency matrix
 # - Compute the floyd matrix
 # - Compute the non diagonal average
-avgc = averageOfNonDiagElem(floyd(adjacency_matrix(segments)))
-avgt = averageOfNonDiagElem(floyd(adjacency_matrix(segmentsTruth)))
+#avgc = averageOfNonDiagElem(floyd(adjacency_matrix(segments)))
+#avgt = averageOfNonDiagElem(floyd(adjacency_matrix(segmentsTruth)))
 
 #Compute the 6 metrics
 precision = numpy.around(len(TN) / len(segments) * 100, 2)
@@ -101,7 +134,7 @@ recall = numpy.around(len(TN) / len(segmentsTruth) * 100, 2)
 fscore = numpy.around((2 * recall * precision) / (recall + precision), 2)
 accuracy = numpy.around(numpy.average([distance for distance in mapping.values()]) * convCoef, 2)
 std = numpy.around(numpy.std([distance for distance in mapping.values()]) * convCoef, 2)
-correctness = numpy.around(avgt / avgc, 2) * 100
+#correctness = numpy.around(avgt / avgc, 2) * 100
 
 print(colored("###Segment evalution###", "magenta"))
 print("Precision = ", precision, "%")
@@ -109,8 +142,4 @@ print("Recall = ", recall, "%")
 print("FScore = ", fscore, "%")
 print("Accuracy = ", accuracy, "m")
 print("Standard deviation = ", std, "m")
-print("Correctness = ", correctness, "%")
-
-# resultfile = open("results.txt","a")
-# resultfile.write(path + ' ' + pathTruth + ' ' + str(Tmatch) + ' ' + str(precision) + ' ' + str(recall) + ' ' + str(fscore) + ' ' + str(completeness) + ' ' + str(precision) + ' ' + str(std) + ' ' + str(correctness) + '\n') 
-# resultfile.close()
+#print("Correctness = ", correctness, "%")
